@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#120d0a">
+<title>Survive or Die</title>
+<style>
+  :root {
+    --bg: #120d0a;
+    --panel: #1f1712;
+    --panel-2: #2a1f18;
+    --line: #4a3a2c;
+    --text: #f2ead8;
+    --muted: #b3a690;
+    --accent: #f2c230;
+    --danger: #e0473a;
+    --ok: #5cc46a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 17px;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  header .logo { font-weight: 800; letter-spacing: 0.08em; color: var(--accent); font-size: 15px; }
+  header .who { color: var(--muted); font-size: 14px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: var(--danger); vertical-align: middle; }
+  .dot.on { background: var(--ok); }
+  main { flex: 1; padding: 20px 16px 28px; max-width: 520px; width: 100%; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 4px 0 10px; line-height: 1.15; }
+  p { color: var(--muted); line-height: 1.45; margin: 0 0 14px; white-space: pre-wrap; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  input {
+    width: 100%;
+    padding: 14px;
+    font-size: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    outline: none;
+  }
+  input:focus { border-color: var(--accent); }
+  #code { text-transform: uppercase; letter-spacing: 0.3em; font-weight: 700; }
+  button {
+    font: inherit;
+    cursor: pointer;
+  }
+  .btn {
+    display: block;
+    width: 100%;
+    margin-top: 12px;
+    padding: 16px 14px;
+    border-radius: 12px;
+    border: 2px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 700;
+    text-align: left;
+  }
+  .btn small { display: block; font-weight: 400; font-size: 14px; color: var(--muted); margin-top: 4px; }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--accent); color: #1a1208; border-color: var(--accent); text-align: center; }
+  .btn.danger { border-color: var(--danger); }
+  .btn:disabled { opacity: 0.4; }
+  .info {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 0 0 14px;
+    font-size: 15px;
+  }
+  .info div { padding: 3px 0; }
+  .err { color: var(--danger); min-height: 22px; margin-top: 12px; }
+  .locked {
+    margin-top: 18px;
+    padding: 16px;
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    text-align: center;
+  }
+  .locked b { color: var(--accent); }
+  .center { text-align: center; padding-top: 40px; }
+  .spinner {
+    width: 34px; height: 34px; margin: 0 auto 18px;
+    border: 4px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed; left: 16px; right: 16px; bottom: 18px;
+    max-width: 488px; margin: 0 auto;
+    background: var(--panel-2); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 12px 14px; text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">SURVIVE OR DIE</div>
+  <div class="who"><span id="dot" class="dot"></span><span id="who">Not connected</span></div>
+</header>
+
+<main>
+
+  <!-- JOIN -->
+  <section id="view-join">
+    <h1>Join a game</h1>
+    <p>Enter the room code shown on the host's screen.</p>
+    <form id="join-form" autocomplete="off">
+      <label for="code">Room code</label>
+      <input id="code" maxlength="4" inputmode="text" autocapitalize="characters" required>
+      <label for="name">Your name</label>
+      <input id="name" maxlength="16" required>
+      <button class="btn primary" type="submit" id="join-btn">JOIN</button>
+      <div class="err" id="join-err"></div>
+    </form>
+  </section>
+
+  <!-- CONNECTING / WAITING -->
+  <section id="view-wait" class="hidden center">
+    <div class="spinner"></div>
+    <h1 id="wait-title">Connecting…</h1>
+    <p id="wait-text">The server may take up to a minute to wake up.</p>
+  </section>
+
+  <!-- HOST-DRIVEN SCREEN -->
+  <section id="view-screen" class="hidden">
+    <h1 id="s-title"></h1>
+    <p id="s-text"></p>
+    <div id="s-info" class="info hidden"></div>
+    <div id="s-buttons"></div>
+    <div id="s-locked" class="locked hidden"></div>
+    <p id="s-note" style="margin-top:16px"></p>
+  </section>
+
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- storage (may be blocked: always guarded) ----------
+  function load(k) { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } }
+  function save(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function drop(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var ws = null;
+  var me = { pid: load("sod_pid"), code: load("sod_code"), name: load("sod_name") };
+  var wantJoin = false;
+  var retry = 0;
+  var currentScreen = null;
+  var toastTimer = null;
+
+  // Prefill from link (?code=ABCD) or last game
+  var params = new URLSearchParams(location.search);
+  $("code").value = (params.get("code") || me.code || "").toUpperCase();
+  $("name").value = me.name || "";
+
+  function show(view) {
+    ["view-join", "view-wait", "view-screen"].forEach(function (v) {
+      $(v).classList.toggle("hidden", v !== view);
+    });
+  }
+
+  function setStatus(on, text) {
+    $("dot").classList.toggle("on", on);
+    $("who").textContent = text;
+  }
+
+  function toast(text) {
+    $("toast").textContent = text;
+    $("toast").classList.remove("hidden");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { $("toast").classList.add("hidden"); }, 3500);
+  }
+
+  function wait(title, text) {
+    $("wait-title").textContent = title;
+    $("wait-text").textContent = text || "";
+    show("view-wait");
+  }
+
+  function send(obj) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+  }
+
+  // ---------- connection ----------
+  function connect() {
+    var proto = location.protocol === "https:" ? "wss://" : "ws://";
+    ws = new WebSocket(proto + location.host + "/");
+
+    ws.onopen = function () {
+      retry = 0;
+      if (wantJoin) {
+        send({ t: "join", code: me.code, name: me.name, pid: me.pid || undefined });
+      }
+    };
+
+    ws.onmessage = function (ev) {
+      var msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      handle(msg);
+    };
+
+    ws.onclose = function () {
+      setStatus(false, wantJoin ? "Reconnecting…" : "Not connected");
+      if (wantJoin) {
+        if (!currentScreen) wait("Reconnecting…", "Lost connection. Trying again…");
+        retry = Math.min(retry + 1, 6);
+        setTimeout(connect, 500 * retry);
+      }
+    };
+  }
+
+  function handle(msg) {
+    switch (msg.t) {
+      case "joined":
+        me.pid = msg.pid; me.name = msg.name; me.code = msg.code;
+        save("sod_pid", me.pid); save("sod_name", me.name); save("sod_code", me.code);
+        setStatus(true, me.name + " · " + me.code);
+        if (!currentScreen) wait("You're in!", "Watch the host's screen. Your choices will appear here.");
+        else renderScreen(currentScreen);
+        break;
+
+      case "error":
+        wantJoin = false;
+        currentScreen = null;
+        drop("sod_pid");
+        me.pid = "";
+        setStatus(false, "Not connected");
+        $("join-err").textContent = msg.text || "Something went wrong.";
+        $("join-btn").disabled = false;
+        show("view-join");
+        break;
+
+      case "kicked":
+        wantJoin = false;
+        currentScreen = null;
+        drop("sod_pid");
+        me.pid = "";
+        setStatus(false, "Not connected");
+        $("join-err").textContent = "The host removed you from the game.";
+        $("join-btn").disabled = false;
+        show("view-join");
+        break;
+
+      case "host_gone":
+        toast("The host lost connection. Waiting for them to come back…");
+        break;
+
+      case "host_back":
+        toast("The host is back.");
+        break;
+
+      case "screen":
+        currentScreen = msg;
+        renderScreen(msg);
+        break;
+
+      case "toast":
+        toast(msg.text || "");
+        break;
+
+      case "pong":
+        break;
+    }
+  }
+
+  // ---------- host-driven screens ----------
+  // {t:"screen", id, title, text, info:[...], buttons:[{id,label,sub,disabled,style}], note, locked}
+  function renderScreen(s) {
+    $("s-title").textContent = s.title || "";
+    $("s-text").textContent = s.text || "";
+    $("s-note").textContent = s.note || "";
+
+    var info = $("s-info");
+    info.innerHTML = "";
+    if (s.info && s.info.length) {
+      s.info.forEach(function (line) {
+        var d = document.createElement("div");
+        d.textContent = line;
+        info.appendChild(d);
+      });
+      info.classList.remove("hidden");
+    } else {
+      info.classList.add("hidden");
+    }
+
+    var box = $("s-buttons");
+    box.innerHTML = "";
+    var lockedBox = $("s-locked");
+
+    if (s.locked) {
+      lockedBox.innerHTML = "Locked in: <b></b><br><span style='color:var(--muted)'>Waiting for the host…</span>";
+      lockedBox.querySelector("b").textContent = s.locked;
+      lockedBox.classList.remove("hidden");
+    } else {
+      lockedBox.classList.add("hidden");
+      (s.buttons || []).forEach(function (b) {
+        var el = document.createElement("button");
+        el.className = "btn" + (b.style ? " " + b.style : "");
+        el.disabled = !!b.disabled;
+        el.textContent = b.label;
+        if (b.sub) {
+          var sm = document.createElement("small");
+          sm.textContent = b.sub;
+          el.appendChild(sm);
+        }
+        el.onclick = function () {
+          send({ t: "press", screen: s.id, button: b.id });
+          s.locked = b.label;
+          renderScreen(s);
+        };
+        box.appendChild(el);
+      });
+    }
+
+    show("view-screen");
+  }
+
+  // ---------- join form ----------
+  $("join-form").onsubmit = function (e) {
+    e.preventDefault();
+    var code = $("code").value.trim().toUpperCase();
+    var name = $("name").value.trim();
+    if (code.length !== 4) { $("join-err").textContent = "Room codes are 4 letters."; return; }
+    if (!name) { $("join-err").textContent = "Please enter a name."; return; }
+
+    // New room or new name = new player id
+    if (code !== me.code || name !== me.name) { me.pid = ""; drop("sod_pid"); }
+
+    me.code = code; me.name = name;
+    $("join-err").textContent = "";
+    $("join-btn").disabled = true;
+    wantJoin = true;
+    wait("Connecting…", "The server may take up to a minute to wake up.");
+
+    if (ws && ws.readyState === 1) send({ t: "join", code: me.code, name: me.name, pid: me.pid || undefined });
+    else if (!ws || ws.readyState > 1) connect();
+  };
+
+  // Rejoin automatically after a refresh if we were in a game
+  if (me.pid && me.code && me.name) {
+    wantJoin = true;
+    wait("Rejoining " + me.code + "…", "");
+    connect();
+  }
+
+  // Keep-alive
+  setInterval(function () { send({ t: "ping" }); }, 20000);
+})();
+</script>
+</body>
+</html>
